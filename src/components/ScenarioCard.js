@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNotes } from "../services/useApi";
 
 const FIT = { fit: ["Estándar", "#EAF3DE", "#27500A"], cfg: ["Configurable", "#FAEEDA", "#633806"], gap: ["Gap probable", "#FAECE7", "#712B13"] };
-const ANS = { si: ["Fit confirmado", "#EAF3DE", "#27500A", "#3B6D11"], dif: ["Con diferencias", "#FAEEDA", "#633806", "#854F0B"], no: ["Gap identificado", "#FAECE7", "#712B13", "#993C1D"] };
+const ANS = { si: ["Fit confirmado", "#EAF3DE", "#27500A", "#3B6D11"], dif: ["Con diferencias", "#FAEEDA", "#633806", "#854F0B"], gap: ["Gap identificado", "#FAECE7", "#712B13", "#993C1D"], no: ["No aplica", "#F1EFE8", "#444441", "#5F5E5A"] };
 
 export default function ScenarioCard({ scenario: s, projectId, response: r, onUpsert }) {
   const [open, setOpen] = useState(false);
@@ -55,11 +55,11 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
 
           <p style={{ fontSize: 13, fontWeight: 500, margin: "0 0 8px" }}>¿El cliente reconoce este proceso?</p>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            {[["si", "✓ Sí, fit"], ["dif", "≈ Similar, con diferencias"], ["no", "✗ Gap / no aplica"]].map(([val, label]) => {
+            {[["si", "✓ Sí, fit"], ["dif", "≈ Similar, con diferencias"], ["gap", "✗ Gap"], ["no", "— No aplica"]].map(([val, label]) => {
               const a = ANS[val];
               const sel = r?.answer === val;
               return (
-                <button key={val} onClick={() => handleAnswer(val)} style={{ flex: 1, minWidth: 130, padding: "8px 10px", fontSize: 12, borderRadius: 8, border: sel ? `1px solid ${a[3]}` : "0.5px solid var(--border)", background: sel ? a[1] : "transparent", color: sel ? a[2] : "var(--text-secondary)", cursor: "pointer", fontWeight: sel ? 500 : 400 }}>
+                <button key={val} onClick={() => handleAnswer(val)} style={{ flex: 1, minWidth: 100, padding: "8px 8px", fontSize: 12, borderRadius: 8, border: sel ? `1px solid ${a[3]}` : "0.5px solid var(--border)", background: sel ? a[1] : "transparent", color: sel ? a[2] : "var(--text-secondary)", cursor: "pointer", fontWeight: sel ? 500 : 400 }}>
                   {label}
                 </button>
               );
