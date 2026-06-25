@@ -10,10 +10,18 @@ const supabase = createClient(
 async function getUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
+  // Enrich with consultant profile (role, name)
+  const { data: profile } = await supabase
+    .from("consultants")
+    .select("full_name, role, active")
+    .eq("email", user.email)
+    .single();
   return {
     id: user.id,
-    name: user.user_metadata?.full_name || user.email.split("@")[0],
     email: user.email,
+    name: profile?.full_name || user.email.split("@")[0],
+    role: profile?.role || "consultant",
+    active: profile?.active ?? true,
   };
 }
 
@@ -30,14 +38,58 @@ async function signOut() {
 }
 
 function onAuthChange(callback) {
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    callback(session?.user ? {
-      id: session.user.id,
-      name: session.user.user_metadata?.full_name || session.user.email.split("@")[0],
-      email: session.user.email,
-    } : null);
+  // Initial load
+  supabase.auth.getUser().then(async ({ data: { user } }) => {
+    if (!user) { callback(null); return; }
+    const u = await getUser();
+    callback(u);
+  });
+  const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (!session?.user) { callback(null); return; }
+    const u = await getUser();
+    callback(u);
   });
   return () => subscription.unsubscribe();
+}
+
+// ── Consultants (maestro) ─────────────────────────────────────────────────────
+
+async function getConsultants() {
+  const { data, error } = await supabase
+    .from("consultants")
+    .select("*")
+    .order("full_name");
+  if (error) throw error;
+  return data;
+}
+
+async function createConsultant({ email, full_name, role }) {
+  const { data, error } = await supabase
+    .from("consultants")
+    .insert({ email, full_name, role: role || "consultant", active: true })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function updateConsultant(id, fields) {
+  const { data, error } = await supabase
+    .from("consultants")
+    .update(fields)
+    .eq("id", id)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function deleteConsultant(id) {
+  const { error } = await supabase
+    .from("consultants")
+    .update({ active: false })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 // ── Projects ──────────────────────────────────────────────────────────────────
@@ -45,7 +97,7 @@ function onAuthChange(callback) {
 async function getProjects() {
   const { data, error } = await supabase
     .from("projects")
-    .select("*")
+    .select("*, project_members(consultant_id, area, consultants(full_name, email, role))")
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data;
@@ -55,7 +107,7 @@ async function createProject({ name, client, area }) {
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("projects")
-    .insert({ name, client, area, created_by: user?.email, status: "En curso" })
+    .insert({ name, client, area, created_by: user?.email, owner_email: user?.email, status: "En curso" })
     .select()
     .single();
   if (error) throw error;
@@ -64,6 +116,37 @@ async function createProject({ name, client, area }) {
 
 async function deleteProject(projectId) {
   const { error } = await supabase.from("projects").delete().eq("id", projectId);
+  if (error) throw error;
+}
+
+// ── Project Members ───────────────────────────────────────────────────────────
+
+async function getProjectMembers(projectId) {
+  const { data, error } = await supabase
+    .from("project_members")
+    .select("*, consultants(id, full_name, email, role)")
+    .eq("project_id", projectId);
+  if (error) throw error;
+  return data;
+}
+
+async function addProjectMember(projectId, consultantId, area) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("project_members")
+    .insert({ project_id: projectId, consultant_id: consultantId, area: area || null, added_by: user?.email })
+    .select("*, consultants(id, full_name, email, role)")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function removeProjectMember(projectId, consultantId) {
+  const { error } = await supabase
+    .from("project_members")
+    .delete()
+    .eq("project_id", projectId)
+    .eq("consultant_id", consultantId);
   if (error) throw error;
 }
 
@@ -115,12 +198,7 @@ async function addNote(projectId, scenarioId, text) {
   const { data: { user } } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from("notes")
-    .insert({
-      project_id: projectId,
-      scenario_id: scenarioId,
-      text,
-      author: user?.email?.split("@")[0] || "?",
-    })
+    .insert({ project_id: projectId, scenario_id: scenarioId, text, author: user?.email?.split("@")[0] || "?" })
     .select()
     .single();
   if (error) throw error;
@@ -134,7 +212,9 @@ async function deleteNote(projectId, noteId) {
 
 export default {
   getUser, signInWithEmail, signOut, onAuthChange,
+  getConsultants, createConsultant, updateConsultant, deleteConsultant,
   getProjects, createProject, deleteProject,
+  getProjectMembers, addProjectMember, removeProjectMember,
   getResponses, upsertResponse,
   getNotes, addNote, deleteNote,
 };

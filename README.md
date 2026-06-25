@@ -79,10 +79,11 @@ git push -u origin main
 
 ### Paso 6 — Conectar Supabase con la URL de Vercel
 
-1. Volver a Supabase → **Authentication** → **URL Configuration**
-2. En **Site URL** pegar la URL de Vercel (ej: `https://d365-workshops.vercel.app`)
-3. En **Redirect URLs** agregar la misma URL seguida de `/**` (ej: `https://d365-workshops.vercel.app/**`)
-4. Guardar
+1. Volver a Supabase → en el menú lateral clic en **Authentication**
+2. En la parte superior aparecen pestañas — buscar y hacer clic en **URL Configuration**
+3. En el campo **Site URL** pegar la URL de Vercel (ej: `https://d365-workshops.vercel.app`)
+4. Más abajo, en **Redirect URLs**, hacer clic en **Add URL** y agregar la misma URL seguida de `/**` (ej: `https://d365-workshops.vercel.app/**`)
+5. Clic en **Save
 
 La app ya está lista para usar.
 
