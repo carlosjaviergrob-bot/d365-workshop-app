@@ -235,6 +235,18 @@ async function toggleCatalogScenario(scenarioId, active) {
   return data;
 }
 
+async function updateCatalogScenario(scenarioId, fields) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("scenario_selection")
+    .update({ ...fields, updated_by: user?.email, updated_at: new Date().toISOString() })
+    .eq("scenario_id", scenarioId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
 async function getActiveScenarioIds() {
   const { data, error } = await supabase
     .from("scenario_selection")
@@ -246,7 +258,7 @@ async function getActiveScenarioIds() {
 
 export default {
   getUser, signInWithEmail, signOut, onAuthChange,
-  getCatalogScenarios, toggleCatalogScenario, getActiveScenarioIds,
+  getCatalogScenarios, toggleCatalogScenario, updateCatalogScenario, getActiveScenarioIds,
   getConsultants, createConsultant, updateConsultant, deleteConsultant,
   getProjects, createProject, deleteProject,
   getProjectMembers, addProjectMember, removeProjectMember,
