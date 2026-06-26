@@ -1,8 +1,8 @@
 import { useConsultants, useProjectMembers } from "../services/useApi";
 import { useState } from "react";
-import { AREAS } from "../data/scenarios";
+import { ALL_AREAS } from "../data/scenarios";
 
-const AREAS_LIST = ["Todas", ...Object.keys(AREAS)];
+const AREAS_LIST = ["Todas", "Finanzas", "Operaciones", ...Object.keys(ALL_AREAS)];
 const ROLES = { admin: ["Admin", "#FAECE7", "#712B13"], lead: ["Lead", "#FAEEDA", "#633806"], consultant: ["Consultor", "#E6F1FB", "#0C447C"] };
 
 export default function ProjectMembers({ project, currentUser, onClose }) {
