@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ALL_AREAS, ALL_SCENARIOS_COMBINED } from "../data/scenarios";
-import { useResponses, useProjectMembers } from "../services/useApi";
+import { useResponses, useProjectMembers, useActiveScenarios } from "../services/useApi";
 import ScenarioCard from "../components/ScenarioCard";
 
 const VIEWS = [
@@ -10,8 +9,8 @@ const VIEWS = [
   { key: "pend",     label: "Pendientes" },
 ];
 
-const FINANCE_AREAS = ["Contabilidad general", "Cuentas a pagar", "Cuentas a cobrar", "Tesorería y bancos", "Presupuesto", "Activos fijos", "Impuestos", "Control y compliance"];
-const OPS_AREAS = ["Compras", "Inventario y almacenes", "Producción y manufactura", "Planificación de producción", "Mantenimiento", "Gestión de productos"];
+const FINANCE_AREAS = ["Contabilidad general","Cuentas a pagar","Cuentas a cobrar","Tesorería y bancos","Presupuesto","Activos fijos","Impuestos","Control y compliance","Análisis financiero","Gestión de gastos","Valoración de inventario","Finanzas de proyectos","Estructura organizacional","Reconocimiento de ingresos","Descuentos comerciales","Gestión de proveedores"];
+const OPS_AREAS = ["Compras","Inventario y almacenes","Producción y manufactura","Planificación de producción","Mantenimiento","Gestión de productos"];
 
 export default function WorkshopPage({ project, currentUser }) {
   const [area, setArea] = useState(null);
@@ -19,29 +18,40 @@ export default function WorkshopPage({ project, currentUser }) {
   const [search, setSearch] = useState("");
   const { responses, saving, upsert } = useResponses(project.id);
   const { members } = useProjectMembers(project.id);
+  const { scenarios: allScenarios, loading: loadingScenarios } = useActiveScenarios();
 
   const isLeadOrAdmin = currentUser?.role === "admin" || currentUser?.role === "lead";
 
-  // Determinar áreas permitidas según asignación del consultor en el proyecto
-  const allowedAreas = useMemo(() => {
-    if (isLeadOrAdmin) return Object.keys(ALL_AREAS);
-    const myMember = members.find(m => m.consultants?.email === currentUser?.email);
-    if (!myMember || !myMember.area || myMember.area === "Todas") return Object.keys(ALL_AREAS);
-    // Si el área asignada es "Finanzas" o "Operaciones" como grupo
-    if (myMember.area === "Finanzas") return FINANCE_AREAS;
-    if (myMember.area === "Operaciones") return OPS_AREAS;
-    return [myMember.area];
-  }, [members, currentUser, isLeadOrAdmin]);
+  // All unique areas from active scenarios
+  const allAreas = useMemo(() => [...new Set(allScenarios.map(s => s.area))].sort(), [allScenarios]);
 
+  // Determine allowed areas based on member assignment
+  const allowedAreas = useMemo(() => {
+    if (isLeadOrAdmin) return allAreas;
+    const myMember = members.find(m => m.consultants?.email === currentUser?.email);
+    if (!myMember || !myMember.area || myMember.area === "Todas") return allAreas;
+    if (myMember.area === "Finanzas") return allAreas.filter(a => FINANCE_AREAS.includes(a));
+    if (myMember.area === "Operaciones") return allAreas.filter(a => OPS_AREAS.includes(a));
+    return allAreas.filter(a => a === myMember.area);
+  }, [members, currentUser, isLeadOrAdmin, allAreas]);
+
+  // Set initial area
   useEffect(() => {
     if (allowedAreas.length > 0 && (!area || !allowedAreas.includes(area))) {
       setArea(allowedAreas[0]);
     }
   }, [allowedAreas, area]);
 
+  // Scenarios for current area
+  const areaScenarios = useMemo(() =>
+    allScenarios.filter(s => s.area === area),
+    [allScenarios, area]
+  );
+
+  // All allowed scenarios (for gap/dif/pend views)
   const allowedScenarios = useMemo(() =>
-    ALL_SCENARIOS_COMBINED.filter(s => allowedAreas.includes(s.area)),
-    [allowedAreas]
+    allScenarios.filter(s => allowedAreas.includes(s.area)),
+    [allScenarios, allowedAreas]
   );
 
   const stats = useMemo(() => {
@@ -59,7 +69,7 @@ export default function WorkshopPage({ project, currentUser }) {
 
   const list = useMemo(() => {
     const pool = view === "workshop"
-      ? (area ? ALL_AREAS[area]?.scenarios || [] : [])
+      ? areaScenarios
       : allowedScenarios.filter(sc => {
           const a = responses[sc.id]?.answer;
           if (view === "gaps") return a === "no" || a === "gap";
@@ -69,29 +79,42 @@ export default function WorkshopPage({ project, currentUser }) {
         });
     if (!search) return pool;
     const q = search.toLowerCase();
-    return pool.filter(sc => sc.t.toLowerCase().includes(q) || sc.biz.toLowerCase().includes(q));
-  }, [view, area, allowedScenarios, responses, search]);
+    return pool.filter(sc => sc.t.toLowerCase().includes(q) || sc.biz.toLowerCase().includes(q) || sc.id.toLowerCase().includes(q));
+  }, [view, areaScenarios, allowedScenarios, responses, search]);
 
   const prog = name => {
-    const scenarios = ALL_AREAS[name]?.scenarios || [];
-    const done = scenarios.filter(sc => responses[sc.id]?.answer).length;
-    return `${done}/${scenarios.length}`;
+    const scens = allScenarios.filter(s => s.area === name);
+    const done = scens.filter(sc => responses[sc.id]?.answer).length;
+    return `${done}/${scens.length}`;
   };
 
-  // Agrupar áreas por módulo para el nav
+  // Group areas by module
   const financeAllowed = allowedAreas.filter(a => FINANCE_AREAS.includes(a));
   const opsAllowed = allowedAreas.filter(a => OPS_AREAS.includes(a));
+  const otherAllowed = allowedAreas.filter(a => !FINANCE_AREAS.includes(a) && !OPS_AREAS.includes(a));
+
+  if (loadingScenarios) return (
+    <p style={{ fontSize: 13, color: "var(--text-tertiary)", textAlign: "center", padding: "2rem 0" }}>Cargando escenarios...</p>
+  );
+
+  if (allScenarios.length === 0) return (
+    <div style={{ textAlign: "center", padding: "2rem 0" }}>
+      <p style={{ fontSize: 14, color: "var(--text-tertiary)", margin: "0 0 8px" }}>No hay escenarios activos todavía.</p>
+      <p style={{ fontSize: 13, color: "var(--text-tertiary)" }}>Un administrador debe activarlos desde el <strong>Catálogo BPC</strong>.</p>
+    </div>
+  );
 
   if (!area) return <p style={{ fontSize: 13, color: "var(--text-tertiary)", textAlign: "center", padding: "2rem 0" }}>Cargando...</p>;
 
   return (
     <div>
-      {!isLeadOrAdmin && allowedAreas.length < Object.keys(ALL_AREAS).length && (
+      {!isLeadOrAdmin && allowedAreas.length < allAreas.length && (
         <div style={{ background: "#E6F1FB", borderRadius: 8, padding: "8px 14px", marginBottom: "1rem", fontSize: 13, color: "#0C447C" }}>
-          Estás asignado a <strong>{allowedAreas.length === FINANCE_AREAS.length ? "Finanzas" : allowedAreas.length === OPS_AREAS.length ? "Operaciones" : allowedAreas.join(", ")}</strong> en este proyecto.
+          Estás asignado a <strong>{members.find(m => m.consultants?.email === currentUser?.email)?.area || "tu área"}</strong> en este proyecto.
         </div>
       )}
 
+      {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 8, marginBottom: "1.5rem" }}>
         {[
           { label: "Total", val: stats.total, bg: null, tc: null },
@@ -106,6 +129,7 @@ export default function WorkshopPage({ project, currentUser }) {
         ))}
       </div>
 
+      {/* View tabs */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", flexWrap: "wrap", gap: 8 }}>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {VIEWS.map(({ key, label }) => {
@@ -121,6 +145,7 @@ export default function WorkshopPage({ project, currentUser }) {
         {saving && <span style={{ fontSize: 12, color: "var(--text-tertiary)" }}>Guardando...</span>}
       </div>
 
+      {/* Area tabs grouped by module */}
       {view === "workshop" && (
         <div style={{ marginBottom: "1rem" }}>
           {financeAllowed.length > 0 && (
@@ -136,7 +161,7 @@ export default function WorkshopPage({ project, currentUser }) {
             </div>
           )}
           {opsAllowed.length > 0 && (
-            <div>
+            <div style={{ marginBottom: 8 }}>
               <span style={{ fontSize: 11, color: "var(--text-tertiary)", display: "block", marginBottom: 5 }}>OPERACIONES</span>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {opsAllowed.map(name => (
@@ -147,14 +172,29 @@ export default function WorkshopPage({ project, currentUser }) {
               </div>
             </div>
           )}
+          {otherAllowed.length > 0 && (
+            <div>
+              <span style={{ fontSize: 11, color: "var(--text-tertiary)", display: "block", marginBottom: 5 }}>OTRAS ÁREAS</span>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                {otherAllowed.map(name => (
+                  <button key={name} onClick={() => setArea(name)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 20, border: area === name ? "1px solid #185FA5" : "0.5px solid var(--border)", background: area === name ? "#E6F1FB" : "transparent", color: area === name ? "#0C447C" : "var(--text-secondary)", cursor: "pointer", whiteSpace: "nowrap", fontWeight: area === name ? 500 : 400 }}>
+                    {name} <span style={{ fontSize: 10, opacity: .7 }}>{prog(name)}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
+      {/* Search */}
       <input type="text" placeholder="Buscar escenario..." value={search} onChange={e => setSearch(e.target.value)}
         style={{ width: "100%", boxSizing: "border-box", padding: "8px 12px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--surface)", color: "var(--text-primary)", fontSize: 14, marginBottom: 12 }} />
 
       {view === "workshop" && area && (
-        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" }}>{ALL_AREAS[area]?.desc}</p>
+        <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: "0 0 12px" }}>
+          {areaScenarios.length} escenarios activos
+        </p>
       )}
 
       {list.length === 0

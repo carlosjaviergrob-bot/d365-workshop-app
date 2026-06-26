@@ -250,7 +250,7 @@ async function updateCatalogScenario(scenarioId, fields) {
 async function getActiveScenarioIds() {
   const { data, error } = await supabase
     .from("scenario_selection")
-    .select("scenario_id, area, title, module, menu, description, fit")
+    .select("scenario_id, area, title, module, menu, description, fit, forms, biz_question, key_points, tip, bpc_process, bpc_e2e")
     .eq("active", true);
   if (error) throw error;
   return data;

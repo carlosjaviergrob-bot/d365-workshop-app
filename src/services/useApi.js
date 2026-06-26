@@ -127,6 +127,40 @@ export function useResponses(projectId) {
   return { responses, saving, upsert };
 }
 
+// ── Active Scenarios from catalog ────────────────────────────────────────────
+
+export function useActiveScenarios() {
+  const [scenarios, setScenarios] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    backend.getActiveScenarioIds()
+      .then(data => {
+        // Map DB fields to the format expected by ScenarioCard
+        // DB: scenario_id, area, title, forms, biz_question, key_points, tip, bpc_process, bpc_e2e, menu, fit
+        // Card: id, area, t, forms (array), biz, key, tip, bpc_process, bpc_e2e, menu, fit
+        const mapped = data.map(s => ({
+          id: s.scenario_id,
+          area: s.area,
+          t: s.title,
+          forms: s.forms ? s.forms.split(' | ') : [],
+          biz: s.biz_question || '',
+          key: s.key_points || '',
+          tip: s.tip || '',
+          menu: s.menu || '',
+          fit: s.fit || 'fit',
+          bpc_process: s.bpc_process || '',
+          bpc_e2e: s.bpc_e2e || '',
+        }));
+        setScenarios(mapped);
+      })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, []);
+
+  return { scenarios, loading };
+}
+
 // ── Notes ─────────────────────────────────────────────────────────────────────
 
 export function useNotes(projectId, scenarioId) {
