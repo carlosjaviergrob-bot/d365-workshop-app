@@ -133,6 +133,12 @@ export default function ScenarioCatalogPage() {
                     {hasEnrichment && <span style={{ fontSize: 11, color: "#0C447C" }}>✓ Enriquecido</span>}
                   </div>
                   <p style={{ fontSize: 14, margin: "0 0 2px", fontWeight: 500 }}>{s.title}</p>
+                  {(s.bpc_e2e || s.bpc_process) && !isEditing && (
+                    <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: "2px 0 0" }}>
+                      {s.bpc_e2e && <span style={{ background: "#F1EFE8", borderRadius: 4, padding: "1px 6px", marginRight: 4 }}>{s.bpc_e2e}</span>}
+                      {s.bpc_process && <span style={{ background: "#E6F1FB", borderRadius: 4, padding: "1px 6px", color: "#0C447C" }}>{s.bpc_process}</span>}
+                    </p>
+                  )}
                   {s.menu && !isEditing && <p style={{ fontSize: 11, color: "var(--text-tertiary)", margin: 0, fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.menu}</p>}
                 </div>
                 <div style={{ display: "flex", gap: 6, flexShrink: 0 }}>

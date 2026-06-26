@@ -41,6 +41,15 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
       {open && (
         <div style={{ marginTop: 12 }}>
           <div style={{ background: "var(--surface)", borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
+            {(s.bpc_e2e || s.bpc_process) && (
+              <div style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)", fontSize: 13 }}>
+                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Proceso BPC</span>
+                <span style={{ color: "var(--text-primary)", fontSize: 13 }}>
+                  {s.bpc_e2e && <span style={{ background: "#F1EFE8", borderRadius: 4, padding: "1px 6px", marginRight: 6, fontSize: 11 }}>{s.bpc_e2e}</span>}
+                  {s.bpc_process && <span style={{ background: "#E6F1FB", borderRadius: 4, padding: "1px 6px", color: "#0C447C", fontSize: 11 }}>{s.bpc_process}</span>}
+                </span>
+              </div>
+            )}
             {[["Formularios clave", s.forms.join(" · ")], ["Ruta de menú", s.menu], ["Qué mostrar", s.key]].map(([label, val]) => (
               <div key={label} style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)", fontSize: 13 }}>
                 <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>{label}</span>
