@@ -90,7 +90,7 @@ export default function App() {
       </nav>
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1rem" }}>
         {project
-          ? <WorkshopPage project={project} />
+          ? <WorkshopPage project={project} currentUser={user} />
           : page === "admin" && isLeadOrAdmin
             ? <AdminPage />
             : <ProjectsPage onSelect={setProject} currentUser={user} />
