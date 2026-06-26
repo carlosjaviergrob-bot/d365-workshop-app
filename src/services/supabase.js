@@ -210,8 +210,43 @@ async function deleteNote(projectId, noteId) {
   if (error) throw error;
 }
 
+
+// ── Scenario Catalog ──────────────────────────────────────────────────────────
+
+async function getCatalogScenarios() {
+  const { data, error } = await supabase
+    .from("scenario_selection")
+    .select("*")
+    .order("area")
+    .order("scenario_id");
+  if (error) throw error;
+  return data;
+}
+
+async function toggleCatalogScenario(scenarioId, active) {
+  const { data: { user } } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from("scenario_selection")
+    .update({ active, updated_by: user?.email, updated_at: new Date().toISOString() })
+    .eq("scenario_id", scenarioId)
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function getActiveScenarioIds() {
+  const { data, error } = await supabase
+    .from("scenario_selection")
+    .select("scenario_id, area, title, module, menu, description, fit")
+    .eq("active", true);
+  if (error) throw error;
+  return data;
+}
+
 export default {
   getUser, signInWithEmail, signOut, onAuthChange,
+  getCatalogScenarios, toggleCatalogScenario, getActiveScenarioIds,
   getConsultants, createConsultant, updateConsultant, deleteConsultant,
   getProjects, createProject, deleteProject,
   getProjectMembers, addProjectMember, removeProjectMember,

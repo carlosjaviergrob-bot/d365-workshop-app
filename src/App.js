@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import ProjectsPage from "./pages/ProjectsPage";
 import WorkshopPage from "./pages/WorkshopPage";
 import AdminPage from "./pages/AdminPage";
+import ScenarioCatalogPage from "./pages/ScenarioCatalogPage";
 
 const css = `
   :root { --card-bg:#fff; --surface:#f5f4f0; --border:rgba(0,0,0,.12); --text-primary:#1a1a18; --text-secondary:#5c5c58; --text-tertiary:#9c9a92; }
@@ -71,9 +72,9 @@ export default function App() {
           )}
           {!project && isLeadOrAdmin && (
             <div style={{ display: "flex", gap: 4, marginLeft: 16 }}>
-              {["projects", "admin"].map(p => (
+              {["projects", "admin", "catalog"].map(p => (
                 <button key={p} onClick={() => setPage(p)} style={{ fontSize: 12, padding: "4px 12px", borderRadius: 8, border: page === p ? "1px solid #185FA5" : "0.5px solid var(--border)", background: page === p ? "#E6F1FB" : "transparent", color: page === p ? "#0C447C" : "var(--text-secondary)", cursor: "pointer" }}>
-                  {p === "projects" ? "Proyectos" : "Consultores"}
+                  {p === "projects" ? "Proyectos" : p === "admin" ? "Consultores" : "Catálogo BPC"}
                 </button>
               ))}
             </div>
@@ -91,6 +92,8 @@ export default function App() {
       <main style={{ maxWidth: 800, margin: "0 auto", padding: "2rem 1rem" }}>
         {project
           ? <WorkshopPage project={project} currentUser={user} />
+          : page === "catalog" && isLeadOrAdmin
+            ? <ScenarioCatalogPage />
           : page === "admin" && isLeadOrAdmin
             ? <AdminPage />
             : <ProjectsPage onSelect={setProject} currentUser={user} />
