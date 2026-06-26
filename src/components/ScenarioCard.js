@@ -13,6 +13,18 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
   const [fl, fb, fc] = FIT[s.fit] || FIT.cfg;
   const ans = r?.answer ? ANS[r.answer] : null;
 
+  // Normalize fields — handle both array and string forms, missing fields, etc.
+  const forms = Array.isArray(s.forms)
+    ? s.forms.filter(Boolean)
+    : (s.forms ? String(s.forms).split(' | ').filter(Boolean) : []);
+  const biz = s.biz || s.biz_question || '';
+  const key = s.key || s.key_points || '';
+  const tip = s.tip || '';
+  const menu = s.menu || '';
+  const bpcE2e = (s.bpc_e2e && s.bpc_e2e !== 'nan') ? s.bpc_e2e : '';
+  const bpcProcess = (s.bpc_process && s.bpc_process !== 'nan') ? s.bpc_process : '';
+  const description = s.description || '';
+
   const handleAnswer = (val) => onUpsert(s.id, val, note);
   const handleNoteBlur = () => { if (r?.answer) onUpsert(s.id, r.answer, note); };
   const handleAddNote = async () => {
@@ -23,6 +35,7 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
 
   return (
     <div style={{ background: "var(--card-bg)", border: open ? "1px solid #185FA5" : "0.5px solid var(--border)", borderRadius: 12, padding: "1rem 1.25rem", marginBottom: 10 }}>
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, cursor: "pointer" }} onClick={() => setOpen(v => !v)}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 4, alignItems: "center" }}>
@@ -33,7 +46,12 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
             {notes.length > 0 && <span style={{ fontSize: 11, color: "#185FA5" }}>💬 {notes.length}</span>}
           </div>
           <p style={{ fontSize: 14, fontWeight: 500, margin: "0 0 3px" }}>{s.t}</p>
-          <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{s.biz}</p>
+          {biz
+            ? <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{biz}</p>
+            : description
+              ? <p style={{ fontSize: 13, color: "var(--text-secondary)", margin: 0, lineHeight: 1.5 }}>{description}</p>
+              : null
+          }
         </div>
         <span style={{ color: "var(--text-tertiary)", fontSize: 16, flexShrink: 0 }}>{open ? "▲" : "▼"}</span>
       </div>
@@ -41,27 +59,61 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
       {open && (
         <div style={{ marginTop: 12 }}>
           <div style={{ background: "var(--surface)", borderRadius: 8, padding: "12px 14px", marginBottom: 10 }}>
-            {(s.bpc_e2e || s.bpc_process) && (
+
+            {/* BPC Hierarchy */}
+            {(bpcE2e || bpcProcess) && (
               <div style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)", fontSize: 13 }}>
                 <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Proceso BPC</span>
-                <span style={{ color: "var(--text-primary)", fontSize: 13 }}>
-                  {s.bpc_e2e && <span style={{ background: "#F1EFE8", borderRadius: 4, padding: "1px 6px", marginRight: 6, fontSize: 11 }}>{s.bpc_e2e}</span>}
-                  {s.bpc_process && <span style={{ background: "#E6F1FB", borderRadius: 4, padding: "1px 6px", color: "#0C447C", fontSize: 11 }}>{s.bpc_process}</span>}
+                <span style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+                  {bpcE2e && <span style={{ background: "#F1EFE8", borderRadius: 4, padding: "2px 8px", fontSize: 11 }}>{bpcE2e}</span>}
+                  {bpcE2e && bpcProcess && <span style={{ fontSize: 11, color: "var(--text-tertiary)" }}>›</span>}
+                  {bpcProcess && <span style={{ background: "#E6F1FB", borderRadius: 4, padding: "2px 8px", color: "#0C447C", fontSize: 11 }}>{bpcProcess}</span>}
                 </span>
               </div>
             )}
-            {[["Formularios clave", s.forms.join(" · ")], ["Ruta de menú", s.menu], ["Qué mostrar", s.key]].map(([label, val]) => (
-              <div key={label} style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)", fontSize: 13 }}>
-                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>{label}</span>
-                <span style={{ color: "var(--text-primary)", fontFamily: label === "Ruta de menú" ? "monospace" : "inherit", fontSize: label === "Ruta de menú" ? 11 : 13 }}>{val}</span>
+
+            {/* Forms */}
+            {forms.length > 0 && (
+              <div style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)", fontSize: 13 }}>
+                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Formularios clave</span>
+                <span style={{ color: "var(--text-primary)" }}>{forms.join(" · ")}</span>
               </div>
-            ))}
-            <div style={{ display: "flex", gap: 8, padding: "5px 0", fontSize: 13 }}>
-              <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Tip</span>
-              <span style={{ color: "var(--text-primary)", fontSize: 13 }}>{s.tip}</span>
-            </div>
+            )}
+
+            {/* Menu */}
+            {menu && (
+              <div style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: "0.5px solid var(--border)", fontSize: 13 }}>
+                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Ruta de menú</span>
+                <span style={{ color: "var(--text-primary)", fontFamily: "monospace", fontSize: 11 }}>{menu}</span>
+              </div>
+            )}
+
+            {/* Key points */}
+            {key && (
+              <div style={{ display: "flex", gap: 8, padding: "5px 0", borderBottom: tip ? "0.5px solid var(--border)" : "none", fontSize: 13 }}>
+                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Qué mostrar</span>
+                <span style={{ color: "var(--text-primary)" }}>{key}</span>
+              </div>
+            )}
+
+            {/* Tip */}
+            {tip && (
+              <div style={{ display: "flex", gap: 8, padding: "5px 0", fontSize: 13 }}>
+                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Tip</span>
+                <span style={{ color: "#633806", background: "#FAEEDA", borderRadius: 6, padding: "3px 10px", fontSize: 12 }}>{tip}</span>
+              </div>
+            )}
+
+            {/* Description fallback when no enrichment */}
+            {!forms.length && !key && !tip && description && (
+              <div style={{ display: "flex", gap: 8, padding: "5px 0", fontSize: 13 }}>
+                <span style={{ color: "var(--text-tertiary)", minWidth: 110, flexShrink: 0, fontSize: 12 }}>Descripción BPC</span>
+                <span style={{ color: "var(--text-secondary)" }}>{description}</span>
+              </div>
+            )}
           </div>
 
+          {/* Answer buttons */}
           <p style={{ fontSize: 13, fontWeight: 500, margin: "0 0 8px" }}>¿El cliente reconoce este proceso?</p>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             {[["si", "✓ Sí, fit"], ["dif", "≈ Similar, con diferencias"], ["gap", "✗ Gap"], ["no", "— No aplica"]].map(([val, label]) => {
@@ -75,9 +127,11 @@ export default function ScenarioCard({ scenario: s, projectId, response: r, onUp
             })}
           </div>
 
+          {/* Workshop note */}
           <textarea rows={2} placeholder="Notas del workshop (variantes, excepciones, decisiones pendientes)..." value={note} onChange={e => setNote(e.target.value)} onBlur={handleNoteBlur}
             style={{ width: "100%", boxSizing: "border-box", fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid var(--border)", background: "var(--surface)", color: "var(--text-primary)", resize: "none", marginBottom: 10 }} />
 
+          {/* Team notes */}
           {notes.length > 0 && (
             <div style={{ marginBottom: 8 }}>
               <p style={{ fontSize: 12, color: "var(--text-tertiary)", margin: "0 0 6px" }}>Notas del equipo</p>
